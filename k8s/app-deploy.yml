@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: my-application
+  name: my-application
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: my-application
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: my-application
+        group: the-services-services
+    spec:
+      affinity:
+        # Prevent co-locating multiple my-application pods on the same node
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                run: my-application
+            topologyKey: "kubernetes.io/hostname"
+      initContainers:
+      - name: check-zookeeper-connection
+        image: busybox
+        command:
+          - /bin/sh
+          - -c
+          - nc -z -w 30 my-application-zookeeper 2181
+        imagePullPolicy: IfNotPresent
+      - name: check-kafka-connection
+        image: busybox
+        command:
+          - /bin/sh
+          - -c
+          - nc -z -w 30 my-application-kafka 9092
+        imagePullPolicy: IfNotPresent
+      - name: check-mysql-connection
+        image: busybox
+        command:
+          - /bin/sh
+          - -c
+          - nc -z -w 30 my-application-mysql 3306
+        imagePullPolicy: IfNotPresent
+      - name: check-mongodb-connection
+        image: busybox
+        command:
+          - /bin/sh
+          - -c
+          - nc -z -w 30 my-application-mongodb 27017
+        imagePullPolicy: IfNotPresent
+      - name: db-migration-predeploy
+        image: repository.local:8443/some-app-db-migration:__IMAGE_VERSION__
+        args:
+        - --dbHost=my-application-mysql
+        - --dbName=dbSchema
+        - --logLevel=info
+        - --context=predeploy
+        - --liquibaseCommand=update
+        imagePullPolicy: IfNotPresent
+      containers:
+      - name: my-application
+        image: repository.local:8443/my-application:__IMAGE_VERSION__
+        args:
+        - -XX:+ExitOnOutOfMemoryError
+        - -Xmx512m
+        - --spring.profiles.active=kubernetes,dev,debug
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 30
+          successThreshold: 1
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 30
+          successThreshold: 1
+          failureThreshold: 10
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          limits:
+            memory: 768Mi
+      imagePullSecrets:
+      - name: x-snapshot-pull
+      nodeSelector:
+        kops.k8s.io/instancegroup: nodes
+      restartPolicy: Always

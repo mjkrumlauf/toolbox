@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-application-zookeeper
+  namespace: dev
+spec:
+  type: ExternalName
+  externalName: kafka-dev-use1-001.local
+  ports:
+    - port: 2181
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-application-kafka
+  namespace: dev
+spec:
+  type: ExternalName
+  externalName: kafka-dev-use1-001.local
+  ports:
+    - port: 9092
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-application-mysql
+  namespace: dev
+spec:
+  type: ExternalName
+  externalName: somedb-dev-use1-001.local
+  ports:
+    - port: 3306
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-application-mongodb
+  namespace: dev
+spec:
+  type: ExternalName
+  externalName: mongodb-dev-use1-001-ndstats.local
+  ports:
+    - port: 27017

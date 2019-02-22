@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: dev-nginx-internal
+  name: my-application-ingress
+  namespace: dev
+spec:
+ rules:
+ - host: dev-services.local
+   http:
+     paths:
+     - path: /my-application-svc/
+       backend:
+         serviceName: my-application
+         servicePort: 8080

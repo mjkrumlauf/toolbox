@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migration-postdeploy
+  namespace: dev
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      containers:
+      - name: db-migration-postdeploy
+        image: repository.local:8443/some-app-db-migration:__IMAGE_VERSION__
+        args:
+        - --dbHost=my-application-mysql
+        - --dbName=dbSchema
+        - --logLevel=info
+        - --context=postdeploy
+        - --liquibaseCommand=update
+        imagePullPolicy: IfNotPresent
+      imagePullSecrets:
+      - name: x-snapshot-pull
+      restartPolicy: Never
